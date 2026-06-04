@@ -72,6 +72,7 @@ if st.session_state.winners:
         st.balloons()
         
         # 顯示奢華歡迎畫面
+        # 顯示奢華歡迎畫面
         st.write("---")
         st.markdown(
             f"""
@@ -85,5 +86,5 @@ if st.session_state.winners:
                 <p style="font-size: 22px; color: #6c757d; margin-top: 15px; font-style: italic;">Let's give them a big round of applause! 👏👏👏</p>
             </div>
             """, 
-            unsafe_html=True
+            unsafe_allow_html=True  # 👉 這裡修正為 unsafe_allow_html
         )
