@@ -1,6 +1,5 @@
 import streamlit as st
 import random
-from streamlit_confetti import confetti
 
 # 設定網頁標題與圖示
 st.set_page_config(page_title="頒獎典禮 Award Ceremony", page_icon="🏆", layout="centered")
@@ -22,10 +21,8 @@ names_input = st.text_area("每行輸入一個名字（格式：中文 英文名
 
 # 處理輸入的名單，只抓取英文部分
 def extract_english_name(line):
-    # 簡單的切分：假設中文和英文中間有空格，我們抓取後半段的英文
     parts = line.strip().split()
     if len(parts) > 1:
-        # 將後半段的所有英文單字組合起來
         return " ".join(parts[1:])
     elif len(parts) == 1:
         return parts[0]
@@ -53,7 +50,6 @@ if st.session_state.winners:
     st.write("---")
     st.subheader("2. 點擊名次揭曉得獎者！")
     
-    # 建立三欄式按鈕
     col1, col2, col3 = st.columns(3)
     
     with col3:
@@ -71,23 +67,22 @@ if st.session_state.winners:
         current_place = st.session_state.selected_place
         winner_name = st.session_state.winners[current_place]
         
-        # 觸發噴紙花特效（非常熱烈！）
-        confetti()
+        # 這裡會同時噴發「滿天明星亮片」與「滿天上升氣球」，營造極度熱烈氣氛！
+        st.snow()
+        st.balloons()
         
-        # 顯示歡迎畫面
+        # 顯示奢華歡迎畫面
         st.write("---")
-        st.balloons() # 同步飄起氣球
-        
-        # 使用 HTML 豐富視覺效果
         st.markdown(
             f"""
-            <div style="background-color:#FFF3CD; padding: 30px; border-radius: 15px; border-left: 10px solid #FFD700; text-align: center; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
-                <h1 style="color: #856404; font-size: 50px; margin-bottom: 10px;">🎉 CONGRATULATIONS! 🎉</h1>
-                <h2 style="color: #1b1e21; font-size: 30px;">{current_place}</h2>
-                <h1 style="color: #d39e00; font-size: 60px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-top: 20px;">
+            <div style="background-color:#FFF3CD; padding: 40px 20px; border-radius: 20px; border: 5px solid #FFD700; text-align: center; box-shadow: 0px 10px 25px rgba(0,0,0,0.15); animation: pulse 2s infinite;">
+                <h1 style="color: #856404; font-size: 55px; margin-bottom: 10px; font-family: 'Arial Black', sans-serif;">🎉 CONGRATULATIONS! 🎉</h1>
+                <h2 style="color: #495057; font-size: 32px; letter-spacing: 1px; font-weight: bold;">{current_place}</h2>
+                <hr style="border: 1px dashed #FFD700; width: 60%; margin: 20px auto;">
+                <h1 style="color: #d39e00; font-size: 65px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin: 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.1);">
                     ✨ {winner_name} ✨
                 </h1>
-                <p style="font-size: 20px; color: #6c757d; margin-top: 15px;">Let's give them a big round of applause! 👏👏👏</p>
+                <p style="font-size: 22px; color: #6c757d; margin-top: 15px; font-style: italic;">Let's give them a big round of applause! 👏👏👏</p>
             </div>
             """, 
             unsafe_html=True
