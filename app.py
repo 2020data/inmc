@@ -78,12 +78,25 @@ AWARDS_DATA = {
     }
 }
 
-# --- 步驟 2：背景圖處理函數 ---
-def get_image_base64(image_file):
-    encoded_string = base64.b64encode(image_file.getvalue()).decode()
-    return f"data:image/png;base64,{encoded_string}"
+# --- 步驟 2：優化版圖片處理函數 (自動壓縮，解決卡頓) ---
+@st.cache_data
+def get_optimized_image_base64(image_bytes):
+    # 使用 PIL 開啟圖片並壓縮
+    img = Image.open(io.BytesIO(image_bytes))
+    if img.mode in ("RGBA", "P"): 
+        img = img.convert("RGB")
+    
+    # 限制最大寬高，保持比例 (1500px 對於 A4 列印與螢幕檢視已經非常足夠)
+    img.thumbnail((1500, 2000), Image.Resampling.LANCZOS)
+    
+    # 存回 Bytes (改用 JPEG 格式大幅降低檔案大小)
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG", quality=85)
+    
+    encoded_string = base64.b64encode(buffered.getvalue()).decode()
+    return f"data:image/jpeg;base64,{encoded_string}"
 
-# --- 步驟 3：側邊欄設置 (上傳背景與批次列印) ---
+# --- 步驟 3：側邊欄設置 ---
 st.sidebar.header("🎨 獎狀自定義設置")
 bg_option = st.sidebar.radio("獎狀背景選擇：", ["官方預設樣式", "使用上傳背景圖"])
 uploaded_bg = st.sidebar.file_uploader("上傳背景圖 (建議 A4 比例)", type=["jpg", "png", "jpeg"])
@@ -108,25 +121,26 @@ if "selected_rank" not in st.session_state: st.session_state.selected_rank = Non
 for i, rank in enumerate(ranks):
     if cols[i].button(rank):
         st.session_state.selected_rank = rank
-        if "Q1" not in rank: # 前三名才有強烈特效
+        if "Q1" not in rank: 
             st.snow()
             st.balloons()
 
-# --- 步驟 5：渲染獎狀 (防文字重疊邊框設計) ---
+# --- 步驟 5：渲染獎狀 (CSS 共用渲染，解決速度過慢問題) ---
 if st.session_state.selected_rank:
     rank = st.session_state.selected_rank
     winners = current_winners[rank]
     
     main_color = "#D4AF37" if "WINNER" in rank else "#B4B4B4" if "1st" in rank else "#CD7F32" if "2nd" in rank else "#4A90E2"
     
-    # 背景圖處理
+    # 核心優化：將背景圖寫成共用 CSS Class
+    custom_css = ""
     if bg_option == "使用上傳背景圖" and uploaded_bg:
-        img_b64 = get_image_base64(uploaded_bg)
-        bg_style = f"background-image: url('{img_b64}'); background-size: cover; background-position: center; border: none;"
+        # 使用 st.cache_data 暫存機制，不用每次重繪都壓縮一次
+        img_b64 = get_optimized_image_base64(uploaded_bg.getvalue())
+        custom_css = f".cert-container {{ background-image: url('{img_b64}'); background-size: cover; background-position: center; border: none; }}"
     else:
-        bg_style = f"background: #eaeaea; border: none;" # 預設純色背景
+        custom_css = f".cert-container {{ background: #eaeaea; border: none; }}"
 
-    # 建立整體 HTML 的開頭 (包含 CSS 列印分頁設定)
     html_content = f"""<style>
 @media print {{
     body * {{ visibility: hidden; }}
@@ -134,15 +148,15 @@ if st.session_state.selected_rank:
     .print-area {{ position: absolute; left: 0; top: 0; width: 100%; }}
     .page-break {{ page-break-after: always; }}
 }}
+/* 共用背景樣式，大幅減少 HTML 體積 */
+{custom_css}
 </style>
 <div class="print-area">
 """
 
-    # 迴圈批次產生每一位得獎者的獎狀
     for idx, w in enumerate(winners):
-        
-        # 這是避免文字重疊的關鍵：使用 padding 將內部文字往內推，並加上一個白色的 rgba 底色框
-        cert_html = f"""<div style="{bg_style} width: 100%; min-height: 700px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+        # 這裡改用 class="cert-container" 套用背景，不再每次塞入 Base64 字串
+        cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 700px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
 <div style="background-color: rgba(255, 255, 255, 0.9); width: 90%; padding: 50px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1);">
 <h1 style="color: {main_color}; margin: 0; font-size: 38px; font-family: 'Times New Roman', serif;">CERTIFICATE OF AWARD</h1>
 <p style="letter-spacing: 2px; color: #666; font-size: 14px;">2026 I-NMC INTERNATIONAL COMPETITION</p>
