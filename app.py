@@ -1,10 +1,12 @@
 import streamlit as st
 import base64
+from PIL import Image
+import io
 
 # 設定網頁標題與圖示
 st.set_page_config(page_title="2026 I-NMC Award System", page_icon="🏆", layout="centered")
 
-# --- 步驟 1：完整資料庫 (含 Top 25% / Q1 名單) ---
+# --- 步驟 1：完整資料庫 (包含 X, Y, Z 賽事與 Top Q1 名單) ---
 AWARDS_DATA = {
     "Category X - Malaysia (Mathketeers)": {
         "WINNER 🥇": [{"ch": "黃偉健", "en": "Wong Wai Kin"}],
@@ -28,6 +30,50 @@ AWARDS_DATA = {
             {"ch": "劉詩婷", "en": "Shih-Ting Liu"}, {"ch": "蔡宇軒", "en": "Yu-Hsuan Tsai"},
             {"ch": "楊凱文", "en": "Kai-Wen Yang"}, {"ch": "許家豪", "en": "Chia-Hao Hsu"},
             {"ch": "鄭欣儀", "en": "Hsin-I Cheng"}, {"ch": "謝孟哲", "en": "Meng-Che Hsieh"}
+        ]
+    },
+    "Category Y - Malaysia (Theory of Everything)": {
+        "WINNER 🥇": [{"ch": "陳家輝", "en": "Gary Tan Kah Hui"}],
+        "1st RUNNER-UP 🥈": [{"ch": "林美玲", "en": "May Lim Bee Leng"}],
+        "2nd RUNNER-UP 🥉": [{"ch": "李振豪", "en": "Jason Lee Chin How"}],
+        "Top 25% (Q1) 🎖️": [
+            {"ch": "吳淑珍", "en": "Jane Goh Suat Chen"}, {"ch": "張國榮", "en": "Leslie Chong Kok Weng"},
+            {"ch": "曾慧敏", "en": "Amanda Chan Wai Mun"}, {"ch": "許俊傑", "en": "Jack Koh Choon Kit"},
+            {"ch": "劉雪芬", "en": "Shirley Liew Suet Fun"}, {"ch": "蔡嘉誠", "en": "Aaron Chua Kah Seng"},
+            {"ch": "何佩瑜", "en": "Fiona Ho Pui Yee"}, {"ch": "張凱文", "en": "Calvin Teo Kai Wen"}
+        ]
+    },
+    "Category Y - Taiwan (Theory of Everything)": {
+        "WINNER 🥇": [{"ch": "陳怡君", "en": "Yi-Chun Chen"}],
+        "1st RUNNER-UP 🥈": [{"ch": "林冠宇", "en": "Kuan-Yu Lin"}],
+        "2nd RUNNER-UP 🥉": [{"ch": "黃柏翰", "en": "Po-Han Huang"}],
+        "Top 25% (Q1) 🎖️": [
+            {"ch": "李宗翰", "en": "Tsung-Han Li"}, {"ch": "吳佳蓉", "en": "Chia-Jung Wu"},
+            {"ch": "劉宇軒", "en": "Yu-Hsuan Liu"}, {"ch": "蔡孟哲", "en": "Meng-Che Tsai"},
+            {"ch": "楊詩婷", "en": "Shih-Ting Yang"}, {"ch": "許家豪", "en": "Chia-Hao Hsu"},
+            {"ch": "鄭心怡", "en": "Hsin-I Cheng"}, {"ch": "謝承恩", "en": "Cheng-En Hsieh"}
+        ]
+    },
+    "Category Z - Malaysia (Running Math)": {
+        "WINNER 🥇": [{"ch": "葉子健", "en": "Ken Yap Tze Kin"}],
+        "1st RUNNER-UP 🥈": [{"ch": "郭麗萍", "en": "Lily Kuek Lee Peng"}],
+        "2nd RUNNER-UP 🥉": [{"ch": "洪俊賢", "en": "Ivan Ang Choon Kheng"}],
+        "Top 25% (Q1) 🎖️": [
+            {"ch": "鄭偉杰", "en": "Ryan Tay Wai Kit"}, {"ch": "潘宇恆", "en": "Ian Poon Yee Heng"},
+            {"ch": "梁嘉欣", "en": "Carmen Leong Kah Yan"}, {"ch": "沈宇軒", "en": "Shawn Sim Yee Hin"},
+            {"ch": "彭佳恩", "en": "Joanne Pang Jia En"}, {"ch": "羅俊宇", "en": "Lucas Loh Choon Yee"},
+            {"ch": "賴美君", "en": "Michelle Lai Mee Kuen"}, {"ch": "馮健明", "en": "Daniel Fong Kin Ming"}
+        ]
+    },
+    "Category Z - Taiwan (Running Math)": {
+        "WINNER 🥇": [{"ch": "郭俊宏", "en": "Chun-Hung Kuo"}],
+        "1st RUNNER-UP 🥈": [{"ch": "曾菀婷", "en": "Wan-Ting Tseng"}],
+        "2nd RUNNER-UP 🥉": [{"ch": "洪宇恆", "en": "Yu-Heng Hung"}],
+        "Top 25% (Q1) 🎖️": [
+            {"ch": "蘇奕翔", "en": "Yi-Hsiang Su"}, {"ch": "葉柏廷", "en": "Po-Ting Yeh"},
+            {"ch": "高嘉妤", "en": "Chia-Yu Kao"}, {"ch": "莊智淵", "en": "Chih-Yuan Chuang"},
+            {"ch": "侯佩珊", "en": "Pei-Shan Hou"}, {"ch": "邱子軒", "en": "Tzu-Hsuan Chiu"},
+            {"ch": "賴冠廷", "en": "Kuan-Ting Lai"}, {"ch": "簡宇翔", "en": "Yu-Hsiang Chien"}
         ]
     }
 }
@@ -66,23 +112,21 @@ for i, rank in enumerate(ranks):
             st.snow()
             st.balloons()
 
-# --- 步驟 5：渲染獎狀 (修復縮排問題並支援批次產生) ---
+# --- 步驟 5：渲染獎狀 (防文字重疊邊框設計) ---
 if st.session_state.selected_rank:
     rank = st.session_state.selected_rank
     winners = current_winners[rank]
     
-    # 樣式定義
     main_color = "#D4AF37" if "WINNER" in rank else "#B4B4B4" if "1st" in rank else "#CD7F32" if "2nd" in rank else "#4A90E2"
     
-    # 如果有上傳背景，則將 HTML 結構改為背景圖覆蓋
+    # 背景圖處理
     if bg_option == "使用上傳背景圖" and uploaded_bg:
         img_b64 = get_image_base64(uploaded_bg)
         bg_style = f"background-image: url('{img_b64}'); background-size: cover; background-position: center; border: none;"
     else:
-        bg_style = f"background: #fdfbf7; border: 10px double {main_color};"
+        bg_style = f"background: #eaeaea; border: none;" # 預設純色背景
 
     # 建立整體 HTML 的開頭 (包含 CSS 列印分頁設定)
-    # 注意：這裡刻意不縮排，防止 Markdown 誤判
     html_content = f"""<style>
 @media print {{
     body * {{ visibility: hidden; }}
@@ -96,31 +140,31 @@ if st.session_state.selected_rank:
 
     # 迴圈批次產生每一位得獎者的獎狀
     for idx, w in enumerate(winners):
-        # 單張獎狀 HTML (無縮排防跑版)
-        cert_html = f"""<div style="{bg_style} width: 100%; min-height: 550px; border-radius: 15px; padding: 40px; text-align: center; box-shadow: 0px 10px 30px rgba(0,0,0,0.1); font-family: 'Times New Roman', serif; margin-bottom: 30px; page-break-inside: avoid;">
-<h1 style="color: {main_color}; margin: 0; font-size: 40px;">CERTIFICATE OF AWARD</h1>
-<p style="letter-spacing: 2px; color: #666;">2026 I-NMC INTERNATIONAL COMPETITION</p>
-<p style="margin-top: 20px; font-style: italic; color: #888;">This is to certify that the award for</p>
-<h2 style="color: #222; text-transform: uppercase;">{rank}</h2>
-<p style="color: #888; font-style: italic;">is proudly presented to</p>
-<div style="margin: 40px 0;">
+        
+        # 這是避免文字重疊的關鍵：使用 padding 將內部文字往內推，並加上一個白色的 rgba 底色框
+        cert_html = f"""<div style="{bg_style} width: 100%; min-height: 700px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+<div style="background-color: rgba(255, 255, 255, 0.9); width: 90%; padding: 50px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1);">
+<h1 style="color: {main_color}; margin: 0; font-size: 38px; font-family: 'Times New Roman', serif;">CERTIFICATE OF AWARD</h1>
+<p style="letter-spacing: 2px; color: #666; font-size: 14px;">2026 I-NMC INTERNATIONAL COMPETITION</p>
+<p style="margin-top: 25px; font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
+<h2 style="color: #222; text-transform: uppercase; font-size: 32px; margin: 15px 0;">{rank}</h2>
+<p style="color: #777; font-style: italic; font-size: 18px;">is proudly presented to</p>
+<div style="margin: 35px 0;">
 <div style="font-size: 50px; font-weight: 900; color: #111;">{w['ch']}</div>
-<div style="font-size: 28px; font-style: italic; color: #444;">{w['en']}</div>
+<div style="font-size: 26px; font-style: italic; color: #555; margin-top: 5px;">{w['en']}</div>
 </div>
-<div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 14px; color: #999;">
+<div style="margin-top: 40px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888;">
 Organized by I-NMC Committee & UTAR Malaysia
+</div>
 </div>
 </div>
 """
         html_content += cert_html
         
-        # 如果不是最後一張，插入 CSS 分頁符號
         if idx < len(winners) - 1:
             html_content += '<div class="page-break"></div>\n'
 
-    # 封閉 print-area div
     html_content += "</div>"
 
-    # 最終渲染
     st.write("---")
     st.markdown(html_content, unsafe_allow_html=True)
