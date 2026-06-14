@@ -3,11 +3,12 @@ import base64
 from PIL import Image
 import io
 import csv
+import requests
 
 # 設定網頁標題與圖示
-st.set_page_config(page_title="2026 I-NMC Award System", page_icon="🏆", layout="centered")
+st.set_page_config(page_title="2026 I-NMC Live Award System", page_icon="🏆", layout="centered")
 
-# --- 步驟 1：預設資料庫 (官方 2026 I-NMC 名單) ---
+# --- 步驟 1：預設官方資料庫 (若未連結 Google 表單時作為備用) ---
 DEFAULT_AWARDS_DATA = {
     "Category X - Malaysia (Mathketeers)": {
         "WINNER 🥇": [{"ch": "黃偉健", "en": "Wong Wai Kin"}],
@@ -15,10 +16,7 @@ DEFAULT_AWARDS_DATA = {
         "2nd RUNNER-UP 🥉": [{"ch": "林俊傑", "en": "Lim Choon Kit"}],
         "Top 25% (Q1) 🎖️": [
             {"ch": "李欣怡", "en": "Lee Xin Yee"}, {"ch": "吳嘉誠", "en": "Goh Kah Seng"},
-            {"ch": "王淑芬", "en": "Ong Su Fen"}, {"ch": "張家豪", "en": "Chong Kah How"},
-            {"ch": "許紫晴", "en": "Koh Tze Ching"}, {"ch": "曾偉翔", "en": "Chan Wai Siang"},
-            {"ch": "鄭子睿", "en": "Teh Tze Chui"}, {"ch": "劉志明", "en": "Liew Chee Ming"},
-            {"ch": "蔡宇軒", "en": "Chua Yi Hin"}, {"ch": "郭美玲", "en": "Kuek Mei Ling"}
+            {"ch": "王淑芬", "en": "Ong Su Fen"}, {"ch": "張家豪", "en": "Chong Kah How"}
         ]
     },
     "Category X - Taiwan (Mathketeers)": {
@@ -26,11 +24,7 @@ DEFAULT_AWARDS_DATA = {
         "1st RUNNER-UP 🥈": [{"ch": "林雅雯", "en": "Ya-Wen Lin"}],
         "2nd RUNNER-UP 🥉": [{"ch": "黃建宇", "en": "Chien-Yu Huang"}],
         "Top 25% (Q1) 🎖️": [
-            {"ch": "張佩珊", "en": "Pei-Shan Chang"}, {"ch": "李柏翰", "en": "Po-Han Lee"},
-            {"ch": "王佳蓉", "en": "Chia-Jung Wang"}, {"ch": "吳宗翰", "en": "Tsung-Han Wu"},
-            {"ch": "劉詩婷", "en": "Shih-Ting Liu"}, {"ch": "蔡宇軒", "en": "Yu-Hsuan Tsai"},
-            {"ch": "楊凱文", "en": "Kai-Wen Yang"}, {"ch": "許家豪", "en": "Chia-Hao Hsu"},
-            {"ch": "鄭欣儀", "en": "Hsin-I Cheng"}, {"ch": "謝孟哲", "en": "Meng-Che Hsieh"}
+            {"ch": "張佩珊", "en": "Pei-Shan Chang"}, {"ch": "李柏翰", "en": "Po-Han Lee"}
         ]
     },
     "Category Y - Malaysia (Theory of Everything)": {
@@ -38,10 +32,7 @@ DEFAULT_AWARDS_DATA = {
         "1st RUNNER-UP 🥈": [{"ch": "林美玲", "en": "May Lim Bee Leng"}],
         "2nd RUNNER-UP 🥉": [{"ch": "李振豪", "en": "Jason Lee Chin How"}],
         "Top 25% (Q1) 🎖️": [
-            {"ch": "吳淑珍", "en": "Jane Goh Suat Chen"}, {"ch": "張國榮", "en": "Leslie Chong Kok Weng"},
-            {"ch": "曾慧敏", "en": "Amanda Chan Wai Mun"}, {"ch": "許俊傑", "en": "Jack Koh Choon Kit"},
-            {"ch": "劉雪芬", "en": "Shirley Liew Suet Fun"}, {"ch": "蔡嘉誠", "en": "Aaron Chua Kah Seng"},
-            {"ch": "何佩瑜", "en": "Fiona Ho Pui Yee"}, {"ch": "張凱文", "en": "Calvin Teo Kai Wen"}
+            {"ch": "吳淑珍", "en": "Jane Goh Suat Chen"}, {"ch": "張國榮", "en": "Leslie Chong Kok Weng"}
         ]
     },
     "Category Y - Taiwan (Theory of Everything)": {
@@ -49,10 +40,7 @@ DEFAULT_AWARDS_DATA = {
         "1st RUNNER-UP 🥈": [{"ch": "林冠宇", "en": "Kuan-Yu Lin"}],
         "2nd RUNNER-UP 🥉": [{"ch": "黃柏翰", "en": "Po-Han Huang"}],
         "Top 25% (Q1) 🎖️": [
-            {"ch": "李宗翰", "en": "Tsung-Han Li"}, {"ch": "吳佳蓉", "en": "Chia-Jung Wu"},
-            {"ch": "劉宇軒", "en": "Yu-Hsuan Liu"}, {"ch": "蔡孟哲", "en": "Meng-Che Tsai"},
-            {"ch": "楊詩婷", "en": "Shih-Ting Yang"}, {"ch": "許家豪", "en": "Chia-Hao Hsu"},
-            {"ch": "鄭心怡", "en": "Hsin-I Cheng"}, {"ch": "謝承恩", "en": "Cheng-En Hsieh"}
+            {"ch": "李宗翰", "en": "Tsung-Han Li"}, {"ch": "吳佳蓉", "en": "Chia-Jung Wu"}
         ]
     },
     "Category Z - Malaysia (Running Math)": {
@@ -60,10 +48,7 @@ DEFAULT_AWARDS_DATA = {
         "1st RUNNER-UP 🥈": [{"ch": "郭麗萍", "en": "Lily Kuek Lee Peng"}],
         "2nd RUNNER-UP 🥉": [{"ch": "洪俊賢", "en": "Ivan Ang Choon Kheng"}],
         "Top 25% (Q1) 🎖️": [
-            {"ch": "鄭偉杰", "en": "Ryan Tay Wai Kit"}, {"ch": "潘宇恆", "en": "Ian Poon Yee Heng"},
-            {"ch": "梁嘉欣", "en": "Carmen Leong Kah Yan"}, {"ch": "沈宇軒", "en": "Shawn Sim Yee Hin"},
-            {"ch": "彭佳恩", "en": "Joanne Pang Jia En"}, {"ch": "羅俊宇", "en": "Lucas Loh Choon Yee"},
-            {"ch": "賴美君", "en": "Michelle Lai Mee Kuen"}, {"ch": "馮健明", "en": "Daniel Fong Kin Ming"}
+            {"ch": "鄭偉杰", "en": "Ryan Tay Wai Kit"}, {"ch": "潘宇恆", "en": "Ian Poon Yee Heng"}
         ]
     },
     "Category Z - Taiwan (Running Math)": {
@@ -71,15 +56,52 @@ DEFAULT_AWARDS_DATA = {
         "1st RUNNER-UP 🥈": [{"ch": "曾菀婷", "en": "Wan-Ting Tseng"}],
         "2nd RUNNER-UP 🥉": [{"ch": "洪宇恆", "en": "Yu-Heng Hung"}],
         "Top 25% (Q1) 🎖️": [
-            {"ch": "蘇奕翔", "en": "Yi-Hsiang Su"}, {"ch": "葉柏廷", "en": "Po-Ting Yeh"},
-            {"ch": "高嘉妤", "en": "Chia-Yu Kao"}, {"ch": "莊智淵", "en": "Chih-Yuan Chuang"},
-            {"ch": "侯佩珊", "en": "Pei-Shan Hou"}, {"ch": "邱子軒", "en": "Tzu-Hsuan Chiu"},
-            {"ch": "賴冠廷", "en": "Kuan-Ting Lai"}, {"ch": "簡宇翔", "en": "Yu-Hsiang Chien"}
+            {"ch": "蘇奕翔", "en": "Yi-Hsiang Su"}, {"ch": "葉柏廷", "en": "Po-Ting Yeh"}
         ]
     }
 }
 
-# --- 步驟 2：優化版圖片處理函數 ---
+# --- 步驟 2：Google 試算表網址轉換與讀取函數 ---
+def convert_to_csv_url(url):
+    """將常見的 Google 試算表編輯網址轉換為原始 CSV 下載網址"""
+    if "docs.google.com/spreadsheets" in url:
+        try:
+            base_part = url.split("/edit")[0]
+            gid_part = "gid=0"
+            if "gid=" in url:
+                gid_part = "gid=" + url.split("gid=")[1].split("&")[0]
+            return f"{base_part}/export?format=csv&{gid_part}"
+        except:
+            return url
+    return url
+
+@st.cache_data(ttl=10)  # 快取 10 秒，既能流暢載入又能即時更新資料
+def load_live_sheet(url):
+    csv_url = convert_to_csv_url(url)
+    res = requests.get(csv_url)
+    if res.status_code != 200:
+        return None
+    
+    content = res.content.decode('utf-8-sig').splitlines()
+    reader = csv.DictReader(content)
+    
+    live_data = {}
+    for row in reader:
+        cat = row.get("Category", "").strip()
+        rank = row.get("Rank", "").strip()
+        ch = row.get("Chinese Name", "").strip()
+        en = row.get("English Name", "").strip()
+        
+        if not cat or not rank: 
+            continue
+        if cat not in live_data: 
+            live_data[cat] = {}
+        if rank not in live_data[cat]: 
+            live_data[cat][rank] = []
+            
+        live_data[cat][rank].append({"ch": ch, "en": en})
+    return live_data
+
 @st.cache_data
 def get_optimized_image_base64(image_bytes):
     img = Image.open(io.BytesIO(image_bytes))
@@ -89,61 +111,38 @@ def get_optimized_image_base64(image_bytes):
     img.save(buffered, format="JPEG", quality=85)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode()}"
 
-# --- 步驟 3：側邊欄設置 (匯入名單與背景圖) ---
-st.sidebar.header("📁 1. 匯入得獎名單")
+# --- 步驟 3：側邊欄雲端連動設置 ---
+st.sidebar.header("🌐 雲端連動設置")
+sheet_url = st.sidebar.text_input(
+    "請輸入 Google 試算表連結：",
+    placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+)
 
-# 產生範例 CSV (使用 utf-8-sig 讓 Excel 繁體中文不會亂碼)
-sample_csv = "Category,Rank,Chinese Name,English Name\n"
-sample_csv += "示範賽事 A,WINNER 🥇,王小明,Wang Xiao Ming\n"
-sample_csv += "示範賽事 A,1st RUNNER-UP 🥈,陳美麗,Chen Mei Li\n"
-sample_csv += "示範賽事 A,2nd RUNNER-UP 🥉,張大山,Zhang Da Shan\n"
-sample_csv += "示範賽事 A,Top 25% (Q1) 🎖️,李四,Li Si\n"
-sample_csv += "示範賽事 A,Top 25% (Q1) 🎖️,林五,Lin Wu\n"
-st.sidebar.download_button("📥 下載範例 CSV 格式", data=sample_csv.encode('utf-8-sig'), file_name="sample_winners.csv", mime="text/csv")
-
-# 處理檔案上傳
-uploaded_csv = st.sidebar.file_uploader("上傳您的得獎名單 (CSV)", type=["csv"])
-AWARDS_DATA = DEFAULT_AWARDS_DATA # 預設使用官方資料
-
-if uploaded_csv is not None:
-    try:
-        content = uploaded_csv.getvalue().decode('utf-8-sig').splitlines()
-        reader = csv.DictReader(content)
-        custom_data = {}
-        for row in reader:
-            cat = row.get("Category", "").strip()
-            rank = row.get("Rank", "").strip()
-            ch = row.get("Chinese Name", "").strip()
-            en = row.get("English Name", "").strip()
-            
-            if not cat or not rank: continue
-            if cat not in custom_data: custom_data[cat] = {}
-            if rank not in custom_data[cat]: custom_data[cat][rank] = []
-            
-            custom_data[cat][rank].append({"ch": ch, "en": en})
-            
-        if custom_data:
-            AWARDS_DATA = custom_data
-            st.sidebar.success("✅ 成功載入自訂得獎名單！")
-    except Exception as e:
-        st.sidebar.error(f"❌ 讀取檔案失敗，請確保格式正確：{e}")
+AWARDS_DATA = DEFAULT_AWARDS_DATA
+if sheet_url:
+    live_res = load_live_sheet(sheet_url)
+    if live_res:
+        AWARDS_DATA = live_res
+        st.sidebar.success("🚀 已即時連線 Google 表單資料庫！")
+    else:
+        st.sidebar.error("❌ 無法讀取，請檢查雲端共用權限是否開啟。")
 
 st.sidebar.markdown("---")
-st.sidebar.header("🎨 2. 獎狀外觀與列印")
-bg_option = st.sidebar.radio("獎狀背景選擇：", ["預設白金質感底色", "使用上傳背景圖"])
+st.sidebar.header("🎨 獎狀外觀與列印")
+bg_option = st.sidebar.radio("獎狀背景選擇：", ["官方預設樣式", "使用上傳背景圖"])
 uploaded_bg = st.sidebar.file_uploader("上傳背景圖 (建議 A4 比例)", type=["jpg", "png", "jpeg"])
 
 if st.sidebar.button("🖨️ 批次下載 / 存為 PDF"):
     st.sidebar.info("💡 請在彈出的視窗中選擇「另存為 PDF」。")
     st.components.v1.html("<script>window.print();</script>", height=0)
 
-# --- 步驟 4：主畫面選擇 ---
-st.title("🏆 榮耀頒獎典禮系統")
-selected_category = st.selectbox("🎯 選擇賽事類別：", list(AWARDS_DATA.keys()))
+# --- 步驟 4：主畫面動態選擇 ---
+st.title("🏆 2026 I-NMC Live Award System")
+selected_category = st.selectbox("🎯 1. 選擇賽事類別（即時動態讀取）：", list(AWARDS_DATA.keys()))
 current_winners = AWARDS_DATA[selected_category]
 
 st.write("---")
-st.subheader("🎉 揭曉名次")
+st.subheader("🎉 2. 揭曉名次")
 ranks = list(current_winners.keys())
 cols = st.columns(len(ranks) if len(ranks) > 0 else 1)
 
@@ -156,7 +155,7 @@ for i, rank in enumerate(ranks):
             st.snow()
             st.balloons()
 
-# --- 步驟 5：渲染獎狀 (動態加入賽事名稱) ---
+# --- 步驟 5：精密防重疊獎狀渲染 ---
 if st.session_state.selected_rank and st.session_state.selected_rank in current_winners:
     rank = st.session_state.selected_rank
     winners = current_winners[rank]
@@ -183,24 +182,26 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
 """
 
     for idx, w in enumerate(winners):
-        # 注意 HTML 中加入了 <div style="background-color: {main_color}; ...>{selected_category}</div> 顯示賽事名稱
-        cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 700px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-<div style="background-color: rgba(255, 255, 255, 0.92); width: 90%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1);">
-<h1 style="color: {main_color}; margin: 0; font-size: 38px; font-family: 'Times New Roman', serif;">CERTIFICATE OF AWARD</h1>
-<p style="letter-spacing: 2px; color: #666; font-size: 14px; margin-bottom: 5px;">2026 I-NMC INTERNATIONAL COMPETITION</p>
+        # 內層白色防護卡片增加 padding (45px 30px)，將文字向內集中，絕不重疊背景外框圖案
+        cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 700px; padding: 45px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+<div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; padding: 45px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1); box-sizing: border-box;">
+<h1 style="color: {main_color}; margin: 0; font-size: 36px; font-family: 'Times New Roman', serif; font-weight: bold;">CERTIFICATE OF AWARD</h1>
+<p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 I-NMC INTERNATIONAL COMPETITION</p>
 
-<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 25px; border-radius: 30px; font-size: 15px; font-weight: bold; letter-spacing: 1px; margin: 15px 0;">
+<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 10px;">
     {selected_category}
 </div>
 
 <p style="margin-top: 15px; font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
-<h2 style="color: #222; text-transform: uppercase; font-size: 32px; margin: 10px 0;">{rank}</h2>
+<h2 style="color: #222; text-transform: uppercase; font-size: 30px; margin: 10px 0; font-weight: 800;">{rank}</h2>
 <p style="color: #777; font-style: italic; font-size: 18px;">is proudly presented to</p>
+
 <div style="margin: 30px 0;">
-<div style="font-size: 50px; font-weight: 900; color: #111;">{w['ch']}</div>
-<div style="font-size: 26px; font-style: italic; color: #555; margin-top: 5px;">{w['en']}</div>
+<div style="font-size: 48px; font-weight: 900; color: #111; font-family: 'Microsoft JhengHei', sans-serif;">{w['ch']}</div>
+<div style="font-size: 26px; font-style: italic; color: #555; margin-top: 5px; font-family: 'Times New Roman', serif;">{w['en']}</div>
 </div>
-<div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888;">
+
+<div style="margin-top: 35px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888; font-weight: 500;">
 Organized by I-NMC Committee & UTAR Malaysia
 </div>
 </div>
