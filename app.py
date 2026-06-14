@@ -61,9 +61,8 @@ DEFAULT_AWARDS_DATA = {
     }
 }
 
-# --- 步驟 2：Google 試算表網址轉換與讀取函數 ---
+# --- 步驟 2：雲端網址轉換與讀取 ---
 def convert_to_csv_url(url):
-    """將常見的 Google 試算表編輯網址轉換為原始 CSV 下載網址"""
     if "docs.google.com/spreadsheets" in url:
         try:
             base_part = url.split("/edit")[0]
@@ -75,32 +74,27 @@ def convert_to_csv_url(url):
             return url
     return url
 
-@st.cache_data(ttl=10)  # 快取 10 秒，既能流暢載入又能即時更新資料
+@st.cache_data(ttl=10)
 def load_live_sheet(url):
-    csv_url = convert_to_csv_url(url)
-    res = requests.get(csv_url)
-    if res.status_code != 200:
+    try:
+        csv_url = convert_to_csv_url(url)
+        res = requests.get(csv_url)
+        if res.status_code != 200: return None
+        content = res.content.decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(content)
+        live_data = {}
+        for row in reader:
+            cat = row.get("Category", "").strip()
+            rank = row.get("Rank", "").strip()
+            ch = row.get("Chinese Name", "").strip()
+            en = row.get("English Name", "").strip()
+            if not cat or not rank: continue
+            if cat not in live_data: live_data[cat] = {}
+            if rank not in live_data[cat]: live_data[cat][rank] = []
+            live_data[cat][rank].append({"ch": ch, "en": en})
+        return live_data
+    except:
         return None
-    
-    content = res.content.decode('utf-8-sig').splitlines()
-    reader = csv.DictReader(content)
-    
-    live_data = {}
-    for row in reader:
-        cat = row.get("Category", "").strip()
-        rank = row.get("Rank", "").strip()
-        ch = row.get("Chinese Name", "").strip()
-        en = row.get("English Name", "").strip()
-        
-        if not cat or not rank: 
-            continue
-        if cat not in live_data: 
-            live_data[cat] = {}
-        if rank not in live_data[cat]: 
-            live_data[cat][rank] = []
-            
-        live_data[cat][rank].append({"ch": ch, "en": en})
-    return live_data
 
 @st.cache_data
 def get_optimized_image_base64(image_bytes):
@@ -111,12 +105,9 @@ def get_optimized_image_base64(image_bytes):
     img.save(buffered, format="JPEG", quality=85)
     return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode()}"
 
-# --- 步驟 3：側邊欄雲端連動設置 ---
+# --- 步驟 3：側邊欄雲端連動與優化列印設置 ---
 st.sidebar.header("🌐 雲端連動設置")
-sheet_url = st.sidebar.text_input(
-    "請輸入 Google 試算表連結：",
-    placeholder="https://docs.google.com/spreadsheets/d/.../edit"
-)
+sheet_url = st.sidebar.text_input("請輸入 Google 試算表連結：", placeholder="https://docs.google.com/spreadsheets/d/.../edit")
 
 AWARDS_DATA = DEFAULT_AWARDS_DATA
 if sheet_url:
@@ -132,13 +123,14 @@ st.sidebar.header("🎨 獎狀外觀與列印")
 bg_option = st.sidebar.radio("獎狀背景選擇：", ["官方預設樣式", "使用上傳背景圖"])
 uploaded_bg = st.sidebar.file_uploader("上傳背景圖 (建議 A4 比例)", type=["jpg", "png", "jpeg"])
 
+# 核心修復：使用 window.parent.print() 突破 Iframe 限制，並使用 display:none 精準隱藏 Streamlit UI 
 if st.sidebar.button("🖨️ 批次下載 / 存為 PDF"):
-    st.sidebar.info("💡 請在彈出的視窗中選擇「另存為 PDF」。")
-    st.components.v1.html("<script>window.print();</script>", height=0)
+    st.sidebar.info("💡 請在彈出的系統列印視窗中，將目標列印機選擇為「另存為 PDF」。")
+    st.components.v1.html("<script>window.parent.print();</script>", height=0)
 
 # --- 步驟 4：主畫面動態選擇 ---
 st.title("🏆 2026 I-NMC Live Award System")
-selected_category = st.selectbox("🎯 1. 選擇賽事類別（即時動態讀取）：", list(AWARDS_DATA.keys()))
+selected_category = st.selectbox("🎯 1. 選擇賽事類別：", list(AWARDS_DATA.keys()))
 current_winners = AWARDS_DATA[selected_category]
 
 st.write("---")
@@ -155,7 +147,7 @@ for i, rank in enumerate(ranks):
             st.snow()
             st.balloons()
 
-# --- 步驟 5：精密防重疊獎狀渲染 ---
+# --- 步驟 5：精密防重疊與自動斷行獎狀渲染 ---
 if st.session_state.selected_rank and st.session_state.selected_rank in current_winners:
     rank = st.session_state.selected_rank
     winners = current_winners[rank]
@@ -169,12 +161,27 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
     else:
         custom_css = f".cert-container {{ background: #fdfbf7; border: none; }}"
 
+    # 核心修復：強效型國王級列印樣式，強制在列印時隱藏 Streamlit 的所有控制面板、按鈕、側邊欄
     html_content = f"""<style>
 @media print {{
-    body * {{ visibility: hidden; }}
-    .print-area, .print-area * {{ visibility: visible; }}
-    .print-area {{ position: absolute; left: 0; top: 0; width: 100%; }}
-    .page-break {{ page-break-after: always; }}
+    [data-testid="stSidebar"], 
+    [data-testid="stHeader"], 
+    [data-testid="stToolbar"],
+    .stButton,
+    footer,
+    hr {{ 
+        display: none !important; 
+    }}
+    .print-area {{ 
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    .page-break {{ 
+        page-break-after: always !important; 
+        break-after: page !important;
+    }}
 }}
 {custom_css}
 </style>
@@ -182,13 +189,13 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
 """
 
     for idx, w in enumerate(winners):
-        # 內層白色防護卡片增加 padding (45px 30px)，將文字向內集中，絕不重疊背景外框圖案
+        # 核心修復：在賽事名稱的 div 中加入了 max-width, word-break, line-height 確保超長名稱自動完美斷行不重疊
         cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 700px; padding: 45px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
 <div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; padding: 45px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1); box-sizing: border-box;">
 <h1 style="color: {main_color}; margin: 0; font-size: 36px; font-family: 'Times New Roman', serif; font-weight: bold;">CERTIFICATE OF AWARD</h1>
 <p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 I-NMC INTERNATIONAL COMPETITION</p>
 
-<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 10px;">
+<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 8px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 10px; max-width: 90%; word-break: break-word; line-height: 1.4;">
     {selected_category}
 </div>
 
