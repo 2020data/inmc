@@ -1,3 +1,4 @@
 streamlit 
 streamlit-confetti
 Pillow
+requests
