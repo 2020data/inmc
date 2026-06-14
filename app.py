@@ -2,12 +2,13 @@ import streamlit as st
 import base64
 from PIL import Image
 import io
+import csv
 
 # 設定網頁標題與圖示
 st.set_page_config(page_title="2026 I-NMC Award System", page_icon="🏆", layout="centered")
 
-# --- 步驟 1：完整資料庫 (包含 X, Y, Z 賽事與 Top Q1 名單) ---
-AWARDS_DATA = {
+# --- 步驟 1：預設資料庫 (官方 2026 I-NMC 名單) ---
+DEFAULT_AWARDS_DATA = {
     "Category X - Malaysia (Mathketeers)": {
         "WINNER 🥇": [{"ch": "黃偉健", "en": "Wong Wai Kin"}],
         "1st RUNNER-UP 🥈": [{"ch": "陳佳恩", "en": "Tan Jia En"}],
@@ -78,68 +79,96 @@ AWARDS_DATA = {
     }
 }
 
-# --- 步驟 2：優化版圖片處理函數 (自動壓縮，解決卡頓) ---
+# --- 步驟 2：優化版圖片處理函數 ---
 @st.cache_data
 def get_optimized_image_base64(image_bytes):
-    # 使用 PIL 開啟圖片並壓縮
     img = Image.open(io.BytesIO(image_bytes))
-    if img.mode in ("RGBA", "P"): 
-        img = img.convert("RGB")
-    
-    # 限制最大寬高，保持比例 (1500px 對於 A4 列印與螢幕檢視已經非常足夠)
+    if img.mode in ("RGBA", "P"): img = img.convert("RGB")
     img.thumbnail((1500, 2000), Image.Resampling.LANCZOS)
-    
-    # 存回 Bytes (改用 JPEG 格式大幅降低檔案大小)
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG", quality=85)
-    
-    encoded_string = base64.b64encode(buffered.getvalue()).decode()
-    return f"data:image/jpeg;base64,{encoded_string}"
+    return f"data:image/jpeg;base64,{base64.b64encode(buffered.getvalue()).decode()}"
 
-# --- 步驟 3：側邊欄設置 ---
-st.sidebar.header("🎨 獎狀自定義設置")
-bg_option = st.sidebar.radio("獎狀背景選擇：", ["官方預設樣式", "使用上傳背景圖"])
+# --- 步驟 3：側邊欄設置 (匯入名單與背景圖) ---
+st.sidebar.header("📁 1. 匯入得獎名單")
+
+# 產生範例 CSV (使用 utf-8-sig 讓 Excel 繁體中文不會亂碼)
+sample_csv = "Category,Rank,Chinese Name,English Name\n"
+sample_csv += "示範賽事 A,WINNER 🥇,王小明,Wang Xiao Ming\n"
+sample_csv += "示範賽事 A,1st RUNNER-UP 🥈,陳美麗,Chen Mei Li\n"
+sample_csv += "示範賽事 A,2nd RUNNER-UP 🥉,張大山,Zhang Da Shan\n"
+sample_csv += "示範賽事 A,Top 25% (Q1) 🎖️,李四,Li Si\n"
+sample_csv += "示範賽事 A,Top 25% (Q1) 🎖️,林五,Lin Wu\n"
+st.sidebar.download_button("📥 下載範例 CSV 格式", data=sample_csv.encode('utf-8-sig'), file_name="sample_winners.csv", mime="text/csv")
+
+# 處理檔案上傳
+uploaded_csv = st.sidebar.file_uploader("上傳您的得獎名單 (CSV)", type=["csv"])
+AWARDS_DATA = DEFAULT_AWARDS_DATA # 預設使用官方資料
+
+if uploaded_csv is not None:
+    try:
+        content = uploaded_csv.getvalue().decode('utf-8-sig').splitlines()
+        reader = csv.DictReader(content)
+        custom_data = {}
+        for row in reader:
+            cat = row.get("Category", "").strip()
+            rank = row.get("Rank", "").strip()
+            ch = row.get("Chinese Name", "").strip()
+            en = row.get("English Name", "").strip()
+            
+            if not cat or not rank: continue
+            if cat not in custom_data: custom_data[cat] = {}
+            if rank not in custom_data[cat]: custom_data[cat][rank] = []
+            
+            custom_data[cat][rank].append({"ch": ch, "en": en})
+            
+        if custom_data:
+            AWARDS_DATA = custom_data
+            st.sidebar.success("✅ 成功載入自訂得獎名單！")
+    except Exception as e:
+        st.sidebar.error(f"❌ 讀取檔案失敗，請確保格式正確：{e}")
+
+st.sidebar.markdown("---")
+st.sidebar.header("🎨 2. 獎狀外觀與列印")
+bg_option = st.sidebar.radio("獎狀背景選擇：", ["預設白金質感底色", "使用上傳背景圖"])
 uploaded_bg = st.sidebar.file_uploader("上傳背景圖 (建議 A4 比例)", type=["jpg", "png", "jpeg"])
 
 if st.sidebar.button("🖨️ 批次下載 / 存為 PDF"):
-    st.sidebar.info("💡 請在彈出的視窗中選擇「另存為 PDF」，即可一次下載所有產生的獎狀！")
+    st.sidebar.info("💡 請在彈出的視窗中選擇「另存為 PDF」。")
     st.components.v1.html("<script>window.print();</script>", height=0)
 
 # --- 步驟 4：主畫面選擇 ---
-st.title("🏆 2026 I-NMC Award Ceremony")
-selected_category = st.selectbox("1. 選擇賽事類別：", list(AWARDS_DATA.keys()))
+st.title("🏆 榮耀頒獎典禮系統")
+selected_category = st.selectbox("🎯 選擇賽事類別：", list(AWARDS_DATA.keys()))
 current_winners = AWARDS_DATA[selected_category]
 
 st.write("---")
-st.subheader("2. 揭曉名次")
-cols = st.columns(4)
+st.subheader("🎉 揭曉名次")
 ranks = list(current_winners.keys())
+cols = st.columns(len(ranks) if len(ranks) > 0 else 1)
 
-# 使用 Session State 紀錄點擊
 if "selected_rank" not in st.session_state: st.session_state.selected_rank = None
 
 for i, rank in enumerate(ranks):
-    if cols[i].button(rank):
+    if cols[i % len(cols)].button(rank):
         st.session_state.selected_rank = rank
         if "Q1" not in rank: 
             st.snow()
             st.balloons()
 
-# --- 步驟 5：渲染獎狀 (CSS 共用渲染，解決速度過慢問題) ---
-if st.session_state.selected_rank:
+# --- 步驟 5：渲染獎狀 (動態加入賽事名稱) ---
+if st.session_state.selected_rank and st.session_state.selected_rank in current_winners:
     rank = st.session_state.selected_rank
     winners = current_winners[rank]
     
     main_color = "#D4AF37" if "WINNER" in rank else "#B4B4B4" if "1st" in rank else "#CD7F32" if "2nd" in rank else "#4A90E2"
     
-    # 核心優化：將背景圖寫成共用 CSS Class
     custom_css = ""
     if bg_option == "使用上傳背景圖" and uploaded_bg:
-        # 使用 st.cache_data 暫存機制，不用每次重繪都壓縮一次
         img_b64 = get_optimized_image_base64(uploaded_bg.getvalue())
         custom_css = f".cert-container {{ background-image: url('{img_b64}'); background-size: cover; background-position: center; border: none; }}"
     else:
-        custom_css = f".cert-container {{ background: #eaeaea; border: none; }}"
+        custom_css = f".cert-container {{ background: #fdfbf7; border: none; }}"
 
     html_content = f"""<style>
 @media print {{
@@ -148,26 +177,30 @@ if st.session_state.selected_rank:
     .print-area {{ position: absolute; left: 0; top: 0; width: 100%; }}
     .page-break {{ page-break-after: always; }}
 }}
-/* 共用背景樣式，大幅減少 HTML 體積 */
 {custom_css}
 </style>
 <div class="print-area">
 """
 
     for idx, w in enumerate(winners):
-        # 這裡改用 class="cert-container" 套用背景，不再每次塞入 Base64 字串
+        # 注意 HTML 中加入了 <div style="background-color: {main_color}; ...>{selected_category}</div> 顯示賽事名稱
         cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 700px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-<div style="background-color: rgba(255, 255, 255, 0.9); width: 90%; padding: 50px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1);">
+<div style="background-color: rgba(255, 255, 255, 0.92); width: 90%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1);">
 <h1 style="color: {main_color}; margin: 0; font-size: 38px; font-family: 'Times New Roman', serif;">CERTIFICATE OF AWARD</h1>
-<p style="letter-spacing: 2px; color: #666; font-size: 14px;">2026 I-NMC INTERNATIONAL COMPETITION</p>
-<p style="margin-top: 25px; font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
-<h2 style="color: #222; text-transform: uppercase; font-size: 32px; margin: 15px 0;">{rank}</h2>
+<p style="letter-spacing: 2px; color: #666; font-size: 14px; margin-bottom: 5px;">2026 I-NMC INTERNATIONAL COMPETITION</p>
+
+<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 25px; border-radius: 30px; font-size: 15px; font-weight: bold; letter-spacing: 1px; margin: 15px 0;">
+    {selected_category}
+</div>
+
+<p style="margin-top: 15px; font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
+<h2 style="color: #222; text-transform: uppercase; font-size: 32px; margin: 10px 0;">{rank}</h2>
 <p style="color: #777; font-style: italic; font-size: 18px;">is proudly presented to</p>
-<div style="margin: 35px 0;">
+<div style="margin: 30px 0;">
 <div style="font-size: 50px; font-weight: 900; color: #111;">{w['ch']}</div>
 <div style="font-size: 26px; font-style: italic; color: #555; margin-top: 5px;">{w['en']}</div>
 </div>
-<div style="margin-top: 40px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888;">
+<div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888;">
 Organized by I-NMC Committee & UTAR Malaysia
 </div>
 </div>
