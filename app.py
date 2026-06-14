@@ -92,60 +92,24 @@ if st.session_state.selected_place:
     
     st.write("---")
     
-    # 使用網頁頂級規格 HTML/CSS 打造高質感「頒獎證書圖片」
+    # 顯示奢華歡迎畫面 (使用乾淨無空行的 HTML 避免 Streamlit 解析錯誤)
+    st.write("---")
     st.markdown(
         f"""
-        <div style="
-            background-color: {bg_frame}; 
-            padding: 25px; 
-            border-radius: 15px; 
-            box-shadow: 0px 15px 35px rgba(0,0,0,0.3); 
-            max-width: 650px; 
-            margin: 0 auto;
-        ">
-            <div style="
-                background: #fdfbf7; 
-                border: 4px double {theme_color}; 
-                border-radius: 8px; 
-                padding: 40px 30px; 
-                text-align: center;
-                position: relative;
-            ">
+        <div style="background-color: {bg_frame}; padding: 25px; border-radius: 15px; box-shadow: 0px 15px 35px rgba(0,0,0,0.3); max-width: 650px; margin: 0 auto;">
+            <div style="background: #fdfbf7; border: 4px double {theme_color}; border-radius: 8px; padding: 40px 30px; text-align: center; position: relative;">
                 <div style="font-size: 55px; margin-bottom: 10px;">🏆</div>
-                
-                <h2 style="color: {theme_color}; font-family: 'Georgia', serif; font-size: 26px; letter-spacing: 3px; margin: 0 0 5px 0; font-weight: bold;">
-                    CERTIFICATE OF AWARD
-                </h2>
-                <p style="color: #666666; font-size: 13px; letter-spacing: 1px; margin: 0 0 25px 0; font-weight: 600;">
-                    2026 I-NMC COMPETITION
-                </p>
-                
-                <p style="color: #777777; font-size: 16px; font-style: italic; margin-bottom: 20px;">
-                    This honor is proudly presented to
-                </p>
-                
+                <h2 style="color: {theme_color}; font-family: 'Georgia', serif; font-size: 26px; letter-spacing: 3px; margin: 0 0 5px 0; font-weight: bold;">CERTIFICATE OF AWARD</h2>
+                <p style="color: #666666; font-size: 13px; letter-spacing: 1px; margin: 0 0 25px 0; font-weight: 600;">2026 I-NMC COMPETITION</p>
+                <p style="color: #777777; font-size: 16px; font-style: italic; margin-bottom: 20px;">This honor is proudly presented to</p>
                 <div style="margin: 30px 0;">
-                    <div style="font-size: 45px; font-weight: 900; color: #111111; font-family: 'Microsoft JhengHei', sans-serif; margin-bottom: 8px; letter-spacing: 2px;">
-                        {ch_name}
-                    </div>
-                    <div style="font-size: 28px; font-style: italic; color: #444444; font-family: 'Georgia', serif; letter-spacing: 1px;">
-                        {en_name}
-                    </div>
+                    <div style="font-size: 45px; font-weight: 900; color: #111111; font-family: 'Microsoft JhengHei', sans-serif; margin-bottom: 8px; letter-spacing: 2px;">{ch_name}</div>
+                    <div style="font-size: 28px; font-style: italic; color: #444444; font-family: 'Georgia', serif; letter-spacing: 1px;">{en_name}</div>
                 </div>
-                
                 <hr style="border: 0; border-top: 2px solid {theme_color}; width: 45%; margin: 25px auto 20px auto;">
-                
-                <div style="font-size: 24px; font-weight: 800; color: {theme_color}; letter-spacing: 2px; font-family: 'Arial Black', sans-serif; text-transform: uppercase;">
-                    ✨ {rank_title} ✨
-                </div>
-                
-                <p style="color: #666666; font-size: 13px; margin-top: 10px; font-weight: 500;">
-                    {selected_category}
-                </p>
-                
-                <p style="font-size: 14px; color: #a0a0a0; margin-top: 25px; font-style: italic;">
-                    Let's celebrate this wonderful achievement! 👏👏👏
-                </p>
+                <div style="font-size: 24px; font-weight: 800; color: {theme_color}; letter-spacing: 2px; font-family: 'Arial Black', sans-serif; text-transform: uppercase;">✨ {rank_title} ✨</div>
+                <p style="color: #666666; font-size: 13px; margin-top: 10px; font-weight: 500;">{selected_category}</p>
+                <p style="font-size: 14px; color: #a0a0a0; margin-top: 25px; font-style: italic;">Let's celebrate this wonderful achievement! 👏👏👏</p>
             </div>
         </div>
         """, 
