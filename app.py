@@ -218,11 +218,11 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
 <h1 style="color: {main_color}; margin: 0; font-size: 36px; font-family: 'Times New Roman', serif; font-weight: bold; letter-spacing: 1px;">CERTIFICATE OF AWARD</h1>
 <p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 I-NMC INTERNATIONAL COMPETITION</p>
 
-<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; max-width: 90%; word-break: break-word; line-height: 1.4;">
+<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 24px; border-radius: 30px; font-size: 15px; font-weight: bold; letter-spacing: 1px; max-width: 90%; word-break: break-word; line-height: 1.4;">
     {selected_category}
 </div>
-<br>
-<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; max-width: 90%; word-break: break-word; line-height: 1.4;">
+<div style="height: 8px;"></div>
+<div style="background-color: #f5f5f7; color: {main_color}; display: inline-block; padding: 5px 22px; border-radius: 30px; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; max-width: 90%; word-break: break-word; line-height: 1.4; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);">
     {cat_name_value}
 </div>
 </div>
