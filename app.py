@@ -222,7 +222,7 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
     {selected_category}
 </div>
 
-<div style="color: #444444; font-size: 16px; font-weight: 600; font-family: 'Times New Roman', serif; margin-top: 8px; margin-bottom: 5px; max-width: 90%; word-break: break-word; line-height: 1.3; font-style: italic;">
+<div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 22px; border-radius: 30px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; max-width: 90%; word-break: break-word; line-height: 1.4;">
     {cat_name_value}
 </div>
 </div>
