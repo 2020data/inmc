@@ -235,22 +235,23 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
             </div>"""
 
         # 組合當前得獎者的 HTML
-        cert_html = f"""<div class="cert-container" style="page-break-after: always; width: 100%; height: 270mm; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border: 3px double #D4AF37; border-radius: 10px;">
+        # 組合當前得獎者的 HTML (正確使用變數)
+        cert_html = f"""<div class="cert-container" style="page-break-after: always; width: 100%; height: 270mm; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border: 3px double {main_color}; border-radius: 10px;">
     
     <div style="text-align: center;">
-        <h1 style="color: #D4AF37; font-size: 42px; font-family: 'Times New Roman', serif;">Congratulations</h1>
+        <h1 style="color: {main_color}; font-size: 42px; font-family: 'Times New Roman', serif;">Congratulations</h1>
         <p style="color: #666; font-size: 13px;">2026 International-National Mathematics Competition</p>
+        <div style="background-color: {main_color}; color: #ffffff; padding: 5px 20px; border-radius: 20px; margin-top: 10px; display: inline-block;">
+            {selected_category} - {cat_name_value}
+        </div>
     </div>
 
     <div style="text-align: center; width: 100%;">
         <p style="font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
-        <h2 style="color: #222; text-transform: uppercase; font-size: 36px; margin: 5px 0;">WINNER 🥇</h2>
+        <h2 style="color: #222; text-transform: uppercase; font-size: 36px; margin: 5px 0;">{rank}</h2>
         <p style="font-style: italic; color: #777; font-size: 18px;">is proudly presented to</p>
 
-        <div style="margin: 30px 0;">
-            <div style="font-size: 56px; font-weight: 900; color: #111; font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;">黃偉健</div>
-            <div style="font-size: 32px; font-style: italic; color: #555; font-family: 'Times New Roman', serif;">Wong Wai Kin</div>
-        </div>
+        {name_display}
     </div>
 
     <div style="width: 100%; border-top: 1px solid #ccc; padding-top: 15px; text-align: center; font-size: 14px; color: #888;">
