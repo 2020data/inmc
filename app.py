@@ -207,12 +207,7 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
 </style>
 <div class="print-area">
 """
-
-    for idx, w in enumerate(winners):
-        # 讀取 Category Name 欄位
-        cat_name_value = w.get("cat_name", "").strip()
-        
-        # --- 調整字體大小變數 ---
+# --- 調整字體大小變數 ---
 font_config = {
     "h1": "42px",       # Congratulations 大標題
     "rank": "36px",     # 名次 (Winner...)
@@ -237,8 +232,12 @@ else:
     <div style="margin: 40px 0;">
         <div style="font-size: 68px; font-weight: 900; color: #111; font-family: 'Microsoft JhengHei', sans-serif;">{single_name}</div>
     </div>"""
-
-cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 720px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+    
+    for idx, w in enumerate(winners):
+        # 讀取 Category Name 欄位
+        cat_name_value = w.get("cat_name", "").strip()
+    
+    cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 720px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
     <div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; height: 92%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
         <div style="width: 100%;">
             <h1 style="color: {main_color}; margin: 0; font-size: {font_config['h1']}; font-family: 'Times New Roman', serif; font-weight: bold; letter-spacing: 1px;">Congratulations</h1>
