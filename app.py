@@ -215,8 +215,8 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
         cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 720px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
 <div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; height: 92%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-shadow: 0px 5px 20px rgba(0,0,0,0.1); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
 <div style="width: 100%;">
-<h1 style="color: {main_color}; margin: 0; font-size: 36px; font-family: 'Times New Roman', serif; font-weight: bold; letter-spacing: 1px;">CERTIFICATE OF AWARD</h1>
-<p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 I-NMC INTERNATIONAL COMPETITION</p>
+<h1 style="color: {main_color}; margin: 0; font-size: 36px; font-family: 'Times New Roman', serif; font-weight: bold; letter-spacing: 1px;">Congratulations</h1>
+<p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 International-National Mathematics Competition</p>
 
 <div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 24px; border-radius: 30px; font-size: 15px; font-weight: bold; letter-spacing: 1px; max-width: 90%; word-break: break-word; line-height: 1.4;">
     {selected_category}
