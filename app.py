@@ -238,7 +238,6 @@ else:
         <div style="font-size: 68px; font-weight: 900; color: #111; font-family: 'Microsoft JhengHei', sans-serif;">{single_name}</div>
     </div>"""
 
-# --- 組合 HTML ---
 cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 720px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
     <div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; height: 92%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
         <div style="width: 100%;">
