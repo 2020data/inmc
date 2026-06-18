@@ -235,34 +235,28 @@ if st.session_state.selected_rank and st.session_state.selected_rank in current_
             </div>"""
 
         # 組合當前得獎者的 HTML
-        cert_html = f"""<div class="cert-container" style="width: 100%; min-height: 720px; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; page-break-inside: avoid; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-        <div style="background-color: rgba(255, 255, 255, 0.93); width: 92%; height: 92%; padding: 40px 30px; border-radius: 12px; border: 3px double {main_color}; text-align: center; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
-            <div style="width: 100%;">
-                <h1 style="color: {main_color}; margin: 0; font-size: {font_config['h1']}; font-family: 'Times New Roman', serif; font-weight: bold; letter-spacing: 1px;">Congratulations</h1>
-                <p style="letter-spacing: 2px; color: #666; font-size: 13px; margin: 5px 0 15px 0;">2026 International-National Mathematics Competition</p>
-                <div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 6px 24px; border-radius: 30px; font-size: {font_config['cat_label']}; font-weight: bold; letter-spacing: 1px; max-width: 90%; word-break: break-word;">
-                    {selected_category}
-                </div>
-                <div style="height: 8px;"></div>
-                <div style="background-color: #f5f5f7; color: {main_color}; display: inline-block; padding: 5px 22px; border-radius: 30px; font-size: {font_config['cat_label']}; font-weight: 800; border: 1px solid {main_color};">
-                    {cat_name_value}
-                </div>
-            </div>
+        cert_html = f"""<div class="cert-container" style="page-break-after: always; width: 100%; height: 270mm; padding: 40px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border: 3px double #D4AF37; border-radius: 10px;">
+    
+    <div style="text-align: center;">
+        <h1 style="color: #D4AF37; font-size: 42px; font-family: 'Times New Roman', serif;">Congratulations</h1>
+        <p style="color: #666; font-size: 13px;">2026 International-National Mathematics Competition</p>
+    </div>
 
-            <div style="width: 100%;">
-                <p style="margin-top: 10px; font-style: italic; color: #777; font-size: 18px; margin-bottom: 5px;">This is to certify that the award for</p>
-                <h2 style="color: #222; text-transform: uppercase; font-size: {font_config['rank']}; margin: 5px 0; font-weight: 800; letter-spacing: 0.5px;">{rank}</h2>
-                <p style="color: #777; font-style: italic; font-size: 18px; margin-bottom: 0;">is proudly presented to</p>
-                {name_display}
-            </div>
+    <div style="text-align: center; width: 100%;">
+        <p style="font-style: italic; color: #777; font-size: 18px;">This is to certify that the award for</p>
+        <h2 style="color: #222; text-transform: uppercase; font-size: 36px; margin: 5px 0;">WINNER 🥇</h2>
+        <p style="font-style: italic; color: #777; font-size: 18px;">is proudly presented to</p>
 
-            <div style="width: 100%;">
-                <div style="border-top: 1px solid #ccc; padding-top: 15px; font-size: 14px; color: #888; font-weight: 500;">
-                    Organized by I-NMC Committee & UTAR Malaysia
-                </div>
-            </div>
+        <div style="margin: 30px 0;">
+            <div style="font-size: 56px; font-weight: 900; color: #111; font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;">黃偉健</div>
+            <div style="font-size: 32px; font-style: italic; color: #555; font-family: 'Times New Roman', serif;">Wong Wai Kin</div>
         </div>
     </div>
+
+    <div style="width: 100%; border-top: 1px solid #ccc; padding-top: 15px; text-align: center; font-size: 14px; color: #888;">
+        Organized by I-NMC Committee & UTAR Malaysia
+    </div>
+</div>
     """
         html_content += cert_html
         
