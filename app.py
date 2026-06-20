@@ -101,58 +101,121 @@ try:
             df = all_sheets[sheet_name]
             
             if "Grade/10" in df.columns:
-                df_sorted = df.sort_values(by="Grade/10", ascending=False).reset_index(drop=True)
-                
-                # 判定是否為 IronMath，是的話只取 1 名；否則取 3 名
                 is_ironmath = "IronMath" in sheet_name
-                top_n = 1 if is_ironmath else 3
-                q1_count = max(1, math.ceil(len(df_sorted) * 0.25))
-                
-                top_df = df_sorted.head(top_n)
-                q1_df = df_sorted.head(q1_count)
-                
-                if show_leaderboard:
-                    with col1 if i % 2 == 0 else col2:
-                        st.subheader(display_title)
-                        st.markdown(f"**🏅 Top {top_n} & Top 25% (共 {q1_count} 名)**")
-                        st.dataframe(q1_df, use_container_width=True)
-                
-                ch_col, en_col = find_name_columns(df_sorted)
-                
-                # [A] 頒發主名次 (WINNER / 1st / 2nd)
-                for rank_idx in range(len(top_df)):
-                    row = top_df.iloc[rank_idx]
-                    rank_label = RANK_LABELS[rank_idx]
-                    
-                    ch_name, en_name = clean_name(row[ch_col]), clean_name(row[en_col])
-                    if ch_name == en_name: en_name = ""
-                        
-                    if rank_label not in AWARDS_DATA[display_title]:
-                        AWARDS_DATA[display_title][rank_label] = []
-                    AWARDS_DATA[display_title][rank_label].append({"ch": ch_name, "en": en_name, "cat_name": cat_name})
+                is_category_x = "Category X" in display_title
+                # 尋找是否有名稱為組別或 group 的欄位
+                group_col = next((c for c in df.columns.astype(str) if '組別' in c or 'group' in c.lower()), None)
 
-                # [B] 頒發 Top 25% (Q1) - IronMath 組別不再發放 Q1
-                if not is_ironmath:
+                ch_col, en_col = find_name_columns(df)
+
+                if is_category_x and group_col:
+                    # ==========================================
+                    # [專屬邏輯] Category X - 團隊計分模式
+                    # ==========================================
+                    # 依組別分組，這裡使用 sum() 代表隊員總分。
+                    # (註：如果 Excel 裡該組所有人都直接填寫同一個團隊總分，請將 sum() 改為 max() 避免重複計算)
+                    group_scores = df.groupby(group_col)['Grade/10'].sum().reset_index()
+                    group_scores_sorted = group_scores.sort_values(by="Grade/10", ascending=False).reset_index(drop=True)
+                    
+                    top_n = 3
+                    q1_count = max(1, math.ceil(len(group_scores_sorted) * 0.25))
+                    
+                    top_groups = group_scores_sorted.head(top_n)
+                    q1_groups = group_scores_sorted.head(q1_count)
+                    
+                    if show_leaderboard:
+                        with col1 if i % 2 == 0 else col2:
+                            st.subheader(display_title + " (團隊排名)")
+                            st.markdown(f"**🏅 Top {top_n} & Top 25% (共 {q1_count} 組)**")
+                            st.dataframe(q1_groups, use_container_width=True)
+                            
+                    # [A] 頒發主名次 (WINNER / 1st / 2nd)
+                    for rank_idx in range(len(top_groups)):
+                        grp_name = top_groups.iloc[rank_idx][group_col]
+                        rank_label = RANK_LABELS[rank_idx]
+                        
+                        # 找出該隊伍所有成員
+                        members = df[df[group_col] == grp_name]
+                        ch_names = [clean_name(x) for x in members[ch_col] if clean_name(x)]
+                        en_names = [clean_name(x) for x in members[en_col] if clean_name(x) and clean_name(x) not in ch_names]
+                        
+                        ch_joined = " & ".join(ch_names)
+                        en_joined = " & ".join(en_names)
+                        
+                        # 將隊名與成員姓名組裝 (利用 HTML 控制字體大小，主顯隊名小字，隊員大字)
+                        final_ch = f"<span style='font-size: 32px; color: #555;'>Team: {grp_name}</span><br><span style='font-size: 52px;'>{ch_joined}</span>"
+                        
+                        if rank_label not in AWARDS_DATA[display_title]:
+                            AWARDS_DATA[display_title][rank_label] = []
+                        AWARDS_DATA[display_title][rank_label].append({"ch": final_ch, "en": en_joined, "cat_name": cat_name})
+                        
+                    # [B] 頒發 Top 25% (Q1)
                     AWARDS_DATA[display_title][Q1_LABEL] = []
-                    for rank_idx in range(len(q1_df)):
-                        row = q1_df.iloc[rank_idx]
+                    for rank_idx in range(len(q1_groups)):
+                        grp_name = q1_groups.iloc[rank_idx][group_col]
+                        
+                        members = df[df[group_col] == grp_name]
+                        ch_names = [clean_name(x) for x in members[ch_col] if clean_name(x)]
+                        en_names = [clean_name(x) for x in members[en_col] if clean_name(x) and clean_name(x) not in ch_names]
+                        
+                        ch_joined = " & ".join(ch_names)
+                        en_joined = " & ".join(en_names)
+                        final_ch = f"<span style='font-size: 32px; color: #555;'>Team: {grp_name}</span><br><span style='font-size: 52px;'>{ch_joined}</span>"
+                        
+                        AWARDS_DATA[display_title][Q1_LABEL].append({"ch": final_ch, "en": en_joined, "cat_name": cat_name})
+
+                else:
+                    # ==========================================
+                    # [原本邏輯] Y, Z, IronMath - 個人計分模式
+                    # ==========================================
+                    df_sorted = df.sort_values(by="Grade/10", ascending=False).reset_index(drop=True)
+                    
+                    top_n = 1 if is_ironmath else 3
+                    q1_count = max(1, math.ceil(len(df_sorted) * 0.25))
+                    
+                    top_df = df_sorted.head(top_n)
+                    q1_df = df_sorted.head(q1_count)
+                    
+                    if show_leaderboard:
+                        with col1 if i % 2 == 0 else col2:
+                            st.subheader(display_title)
+                            st.markdown(f"**🏅 Top {top_n} & Top 25% (共 {q1_count} 名)**")
+                            st.dataframe(q1_df, use_container_width=True)
+                    
+                    # [A] 頒發主名次 (WINNER / 1st / 2nd)
+                    for rank_idx in range(len(top_df)):
+                        row = top_df.iloc[rank_idx]
+                        rank_label = RANK_LABELS[rank_idx]
+                        
                         ch_name, en_name = clean_name(row[ch_col]), clean_name(row[en_col])
                         if ch_name == en_name: en_name = ""
-                        AWARDS_DATA[display_title][Q1_LABEL].append({"ch": ch_name, "en": en_name, "cat_name": cat_name})
+                            
+                        if rank_label not in AWARDS_DATA[display_title]:
+                            AWARDS_DATA[display_title][rank_label] = []
+                        AWARDS_DATA[display_title][rank_label].append({"ch": ch_name, "en": en_name, "cat_name": cat_name})
 
-                # [C] 紀錄 UTTU Trophy 對決資訊
-                if is_ironmath and not top_df.empty:
-                    best_score = top_df.iloc[0]["Grade/10"]
-                    best_ch = clean_name(top_df.iloc[0][ch_col])
-                    best_en = clean_name(top_df.iloc[0][en_col])
-                    if best_ch == best_en: best_en = ""
-                    
-                    if "UTAR" in sheet_name:
-                        utar_ironmath_score = best_score
-                        utar_ironmath_data = {"ch": best_ch, "en": best_en, "cat_name": "IronMath Overall Champion"}
-                    elif "THU" in sheet_name:
-                        thu_ironmath_score = best_score
-                        thu_ironmath_data = {"ch": best_ch, "en": best_en, "cat_name": "IronMath Overall Champion"}
+                    # [B] 頒發 Top 25% (Q1) - IronMath 組別不再發放 Q1
+                    if not is_ironmath:
+                        AWARDS_DATA[display_title][Q1_LABEL] = []
+                        for rank_idx in range(len(q1_df)):
+                            row = q1_df.iloc[rank_idx]
+                            ch_name, en_name = clean_name(row[ch_col]), clean_name(row[en_col])
+                            if ch_name == en_name: en_name = ""
+                            AWARDS_DATA[display_title][Q1_LABEL].append({"ch": ch_name, "en": en_name, "cat_name": cat_name})
+
+                    # [C] 紀錄 UTTU Trophy 對決資訊
+                    if is_ironmath and not top_df.empty:
+                        best_score = top_df.iloc[0]["Grade/10"]
+                        best_ch = clean_name(top_df.iloc[0][ch_col])
+                        best_en = clean_name(top_df.iloc[0][en_col])
+                        if best_ch == best_en: best_en = ""
+                        
+                        if "UTAR" in sheet_name:
+                            utar_ironmath_score = best_score
+                            utar_ironmath_data = {"ch": best_ch, "en": best_en, "cat_name": "IronMath Overall Champion"}
+                        elif "THU" in sheet_name:
+                            thu_ironmath_score = best_score
+                            thu_ironmath_data = {"ch": best_ch, "en": best_en, "cat_name": "IronMath Overall Champion"}
             else:
                 if show_leaderboard: st.warning(f"⚠️ 在 {sheet_name} 中找不到 'Grade/10' 欄位。")
         else:
