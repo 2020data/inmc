@@ -66,7 +66,15 @@ show_leaderboard = st.sidebar.checkbox("📊 顯示各組別排行榜", value=Fa
 
 st.sidebar.markdown("---")
 st.sidebar.header("🎨 獎狀外觀與列印")
-bg_option = st.sidebar.radio("獎狀背景選擇：", ["官方預設樣式", "使用上傳背景圖"])
+bg_option = st.sidebar.radio(
+    "獎狀背景選擇：", 
+    [
+        "預設 1：經典象牙白 (Classic Ivory)", 
+        "預設 2：典雅曜金 (Elegant Gold Gradient)", 
+        "預設 3：星空湛藍 (Starry Navy)", 
+        "自訂：使用上傳背景圖"
+    ]
+)
 uploaded_bg = st.sidebar.file_uploader("上傳背景圖 (建議 A4 比例)", type=["jpg", "png", "jpeg"])
 
 if st.sidebar.button("🖨️ 批次下載 / 存為 PDF"):
@@ -103,7 +111,6 @@ try:
             if "Grade/10" in df.columns:
                 is_ironmath = "IronMath" in sheet_name
                 is_category_x = "Category X" in display_title
-                # 尋找是否有名稱為組別或 group 的欄位
                 group_col = next((c for c in df.columns.astype(str) if '組別' in c or 'group' in c.lower()), None)
 
                 ch_col, en_col = find_name_columns(df)
@@ -112,13 +119,13 @@ try:
                     # ==========================================
                     # [專屬邏輯] Category X - 團隊計分模式
                     # ==========================================
-                    # 依組別分組，這裡使用 sum() 代表隊員總分。
-                    # (註：如果 Excel 裡該組所有人都直接填寫同一個團隊總分，請將 sum() 改為 max() 避免重複計算)
                     group_scores = df.groupby(group_col)['Grade/10'].sum().reset_index()
                     group_scores_sorted = group_scores.sort_values(by="Grade/10", ascending=False).reset_index(drop=True)
                     
                     top_n = 3
-                    q1_count = max(1, math.ceil(len(group_scores_sorted) * 0.25))
+                    # 修改：Top 25% 若小於 3 則取 3，但不可超過總組數
+                    total_groups = len(group_scores_sorted)
+                    q1_count = min(total_groups, max(3, math.ceil(total_groups * 0.25)))
                     
                     top_groups = group_scores_sorted.head(top_n)
                     q1_groups = group_scores_sorted.head(q1_count)
@@ -134,7 +141,6 @@ try:
                         grp_name = top_groups.iloc[rank_idx][group_col]
                         rank_label = RANK_LABELS[rank_idx]
                         
-                        # 找出該隊伍所有成員
                         members = df[df[group_col] == grp_name]
                         ch_names = [clean_name(x) for x in members[ch_col] if clean_name(x)]
                         en_names = [clean_name(x) for x in members[en_col] if clean_name(x) and clean_name(x) not in ch_names]
@@ -142,8 +148,8 @@ try:
                         ch_joined = " & ".join(ch_names)
                         en_joined = " & ".join(en_names)
                         
-                        # 將隊名與成員姓名組裝 (利用 HTML 控制字體大小，主顯隊名小字，隊員大字)
-                        final_ch = f"<span style='font-size: 32px; color: #555;'>Team: {grp_name}</span><br><span style='font-size: 52px;'>{ch_joined}</span>"
+                        # 增強隊名與成員文字的對比度
+                        final_ch = f"<span style='font-size: 36px; color: #444; font-weight: bold; letter-spacing: 2px;'>Team: {grp_name}</span><br><span style='font-size: 56px; color: #111;'>{ch_joined}</span>"
                         
                         if rank_label not in AWARDS_DATA[display_title]:
                             AWARDS_DATA[display_title][rank_label] = []
@@ -160,7 +166,7 @@ try:
                         
                         ch_joined = " & ".join(ch_names)
                         en_joined = " & ".join(en_names)
-                        final_ch = f"<span style='font-size: 32px; color: #555;'>Team: {grp_name}</span><br><span style='font-size: 52px;'>{ch_joined}</span>"
+                        final_ch = f"<span style='font-size: 36px; color: #444; font-weight: bold; letter-spacing: 2px;'>Team: {grp_name}</span><br><span style='font-size: 56px; color: #111;'>{ch_joined}</span>"
                         
                         AWARDS_DATA[display_title][Q1_LABEL].append({"ch": final_ch, "en": en_joined, "cat_name": cat_name})
 
@@ -171,7 +177,9 @@ try:
                     df_sorted = df.sort_values(by="Grade/10", ascending=False).reset_index(drop=True)
                     
                     top_n = 1 if is_ironmath else 3
-                    q1_count = max(1, math.ceil(len(df_sorted) * 0.25))
+                    # 修改：Top 25% 若小於 3 則取 3，但不可超過總人數
+                    total_people = len(df_sorted)
+                    q1_count = min(total_people, max(3, math.ceil(total_people * 0.25)))
                     
                     top_df = df_sorted.head(top_n)
                     q1_df = df_sorted.head(q1_count)
@@ -222,7 +230,7 @@ try:
             if show_leaderboard: st.error(f"❌ 找不到工作表：{sheet_name}")
 
     # ==========================================
-    # 結算 UTTU Trophy，加入頒獎選單
+    # 結算 UTTU Trophy
     # ==========================================
     if utar_ironmath_score > -1 and thu_ironmath_score > -1:
         if utar_ironmath_score > thu_ironmath_score:
@@ -230,7 +238,6 @@ try:
         elif thu_ironmath_score > utar_ironmath_score:
             uttu_winner = thu_ironmath_data
         else:
-            # 雙方平手
             uttu_winner = {"ch": f"{utar_ironmath_data['ch']} & {thu_ironmath_data['ch']}", 
                            "en": "UTAR & THU Co-Champions", 
                            "cat_name": "IronMath Overall Champions"}
@@ -239,19 +246,15 @@ try:
             "WINNER 🏆": [uttu_winner]
         }
 
-        # 顯示於排行榜底部
         if show_leaderboard:
             st.markdown("---")
             st.header("🏆 UTTU Trophy (IronMath 巔峰對決)")
             if utar_ironmath_score > thu_ironmath_score:
                 st.success(f"### 🎉 得主：**{utar_ironmath_data['ch']}** (UTAR) - {utar_ironmath_score} 分")
-                st.info(f"⚔️ 成功擊敗 THU 的 {thu_ironmath_data['ch']} ({thu_ironmath_score} 分)！")
             elif thu_ironmath_score > utar_ironmath_score:
                 st.success(f"### 🎉 得主：**{thu_ironmath_data['ch']}** (THU) - {thu_ironmath_score} 分")
-                st.info(f"⚔️ 成功擊敗 UTAR 的 {utar_ironmath_data['ch']} ({utar_ironmath_score} 分)！")
             else:
                 st.warning(f"### 🤝 平手！**{utar_ironmath_data['ch']}** (UTAR) & **{thu_ironmath_data['ch']}** (THU)")
-                st.info(f"⚔️ 雙方同為 {utar_ironmath_score} 分，共享 UTTU Trophy 榮耀！")
             st.markdown("---")
 
 except Exception as e:
@@ -260,12 +263,11 @@ except Exception as e:
 
 
 # ==========================================
-# 5. Live Award 頒獎系統介面 (主畫面重心)
+# 5. Live Award 頒獎系統介面
 # ==========================================
 st.header("🎉 現場頒獎揭曉")
 
 if AWARDS_DATA:
-    # 建立選單 (包含 UTTU Trophy)
     category_options = [info["display"] for info in sheet_mapping.values() if info["display"] in AWARDS_DATA]
     if UTTU_TROPHY_TITLE in AWARDS_DATA:
         category_options.append(UTTU_TROPHY_TITLE)
@@ -298,15 +300,21 @@ if AWARDS_DATA:
             rank = st.session_state.selected_rank
             winners = current_winners[rank]
             
-            # 設定顏色配置：WINNER 🏆 (包含 UTTU) 都是金色
-            main_color = "#D4AF37" if "WINNER" in rank else "#B4B4B4" if "1st" in rank else "#CD7F32" if "2nd" in rank else "#8E44AD"
+            # 設定顏色配置：WINNER / UTTU 為高貴金
+            main_color = "#C5A028" if "WINNER" in rank else "#A0A0A0" if "1st" in rank else "#CD7F32" if "2nd" in rank else "#8E44AD"
             
+            # 依據選擇套用不同的背景樣式
             custom_css = ""
-            if bg_option == "使用上傳背景圖" and uploaded_bg:
+            if bg_option == "自訂：使用上傳背景圖" and uploaded_bg:
                 img_b64 = get_optimized_image_base64(uploaded_bg.getvalue())
-                custom_css = f".cert-container {{ background-image: url('{img_b64}'); background-size: 100% 100%; background-repeat: no-repeat; background-position: center; border: none; }}"
+                custom_css = f".cert-container {{ background-image: url('{img_b64}'); background-size: cover; background-repeat: no-repeat; background-position: center; border: none; }}"
+            elif bg_option == "預設 2：典雅曜金 (Elegant Gold Gradient)":
+                custom_css = f".cert-container {{ background: linear-gradient(135deg, #FFDF73 0%, #D4AF37 50%, #997A15 100%); border: none; }}"
+            elif bg_option == "預設 3：星空湛藍 (Starry Navy)":
+                custom_css = f".cert-container {{ background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); border: none; }}"
             else:
-                custom_css = f".cert-container {{ background: #fdfbf7; border: none; }}"
+                # 預設 1：經典象牙白
+                custom_css = f".cert-container {{ background: #FDFBF7; border: none; }}"
 
             # A4 滿版列印 CSS
             html_content = f"""<style>
@@ -325,37 +333,37 @@ if AWARDS_DATA:
             for idx, w in enumerate(winners):
                 cat_name_value = w.get("cat_name", "").strip()
                 
-                # HTML 結構加入「霸氣排版」 (加大字體、字重加深、增加陰影效果)
+                # HTML 結構加入「霸氣排版」與「高對比文字」設計
                 cert_html = f"""
-                <div class="cert-container" style="width: 100%; max-width: 794px; aspect-ratio: 210 / 297; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px auto; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                    <div style="background-color: rgba(255, 255, 255, 0.93); width: 100%; height: 100%; padding: 10% 8%; border-radius: 12px; border: 4px double {main_color}; text-align: center; box-shadow: 0px 8px 30px rgba(0,0,0,0.15); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+                <div class="cert-container" style="width: 100%; max-width: 794px; aspect-ratio: 210 / 297; padding: 40px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin: 0 auto 30px auto; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25);">
+                    <div style="background-color: rgba(255, 255, 255, 0.95); width: 100%; height: 100%; padding: 10% 8%; border-radius: 12px; border: 4px double {main_color}; text-align: center; box-shadow: inset 0px 0px 20px rgba(0,0,0,0.05); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
                         
                         <div style="width: 100%;">
-                            <h1 style="color: {main_color}; margin: 0; font-size: 46px; font-family: 'Times New Roman', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;">Congratulations</h1>
-                            <p style="letter-spacing: 3px; color: #555; font-size: 15px; margin: 10px 0 25px 0; font-weight: bold;">2026 International-National Mathematics Competition</p>
+                            <h1 style="color: {main_color}; margin: 0; font-size: 48px; font-family: 'Times New Roman', serif; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">Congratulations</h1>
+                            <p style="letter-spacing: 3px; color: #444; font-size: 16px; margin: 10px 0 25px 0; font-weight: 900;">2026 International-National Mathematics Competition</p>
                             
-                            <div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 8px 28px; border-radius: 40px; font-size: 18px; font-weight: 900; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <div style="background-color: {main_color}; color: #ffffff; display: inline-block; padding: 8px 28px; border-radius: 40px; font-size: 18px; font-weight: 900; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
                                 {selected_category}
                             </div>
                             <div style="height: 12px;"></div>
-                            <div style="background-color: #f5f5f7; color: {main_color}; display: inline-block; padding: 6px 24px; border-radius: 30px; font-size: 15px; font-weight: 900; letter-spacing: 0.5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);">
+                            <div style="background-color: #f5f5f7; color: {main_color}; display: inline-block; padding: 6px 24px; border-radius: 30px; font-size: 16px; font-weight: 900; letter-spacing: 0.5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);">
                                 {cat_name_value}
                             </div>
                         </div>
 
                         <div style="width: 100%;">
-                            <p style="margin-top: 15px; font-style: italic; color: #666; font-size: 20px; margin-bottom: 5px;">This is to certify that the award for</p>
-                            <h2 style="color: #111; text-transform: uppercase; font-size: 42px; margin: 10px 0; font-weight: 900; letter-spacing: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">{rank}</h2>
-                            <p style="color: #666; font-style: italic; font-size: 20px; margin-bottom: 0;">is proudly presented to</p>
+                            <p style="margin-top: 15px; font-style: italic; color: #555; font-size: 22px; margin-bottom: 5px; font-weight: bold;">This is to certify that the award for</p>
+                            <h2 style="color: {main_color}; text-transform: uppercase; font-size: 46px; margin: 15px 0; font-weight: 900; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.15);">{rank}</h2>
+                            <p style="color: #555; font-style: italic; font-size: 22px; margin-bottom: 0; font-weight: bold;">is proudly presented to</p>
                             
                             <div style="margin: 40px 0;">
-                                <div style="font-size: 72px; font-weight: 900; color: #000; font-family: 'Microsoft JhengHei', sans-serif; min-height: 90px; line-height: 1.1; letter-spacing: 4px; text-shadow: 2px 2px 4px rgba(0,0,0,0.15); margin-bottom: 10px;">{w['ch']}</div>
-                                <div style="font-size: 34px; font-style: italic; font-weight: bold; color: #444; font-family: 'Times New Roman', serif; min-height: 45px; line-height: 1.1; letter-spacing: 1px;">{w['en']}</div>
+                                <div style="font-size: 76px; font-weight: 900; color: #111111; font-family: 'Microsoft JhengHei', sans-serif; min-height: 90px; line-height: 1.1; letter-spacing: 4px; text-shadow: 2px 2px 5px rgba(0,0,0,0.2); margin-bottom: 10px;">{w['ch']}</div>
+                                <div style="font-size: 36px; font-style: italic; font-weight: bold; color: #333333; font-family: 'Times New Roman', serif; min-height: 45px; line-height: 1.1; letter-spacing: 1px;">{w['en']}</div>
                             </div>
                         </div>
 
                         <div style="width: 100%;">
-                            <div style="border-top: 2px solid #ddd; padding-top: 20px; font-size: 16px; color: #777; font-weight: bold; letter-spacing: 1px;">
+                            <div style="border-top: 2px solid #ccc; padding-top: 20px; font-size: 16px; color: #666; font-weight: 900; letter-spacing: 1.5px;">
                                 Organized by I-NMC Committee & UTAR Malaysia
                             </div>
                         </div>
