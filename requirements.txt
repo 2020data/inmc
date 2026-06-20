@@ -2,3 +2,4 @@ streamlit
 streamlit-confetti
 Pillow
 requests
+openpyxl
